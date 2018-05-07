@@ -4,8 +4,6 @@ app.locals.moment = require ('moment');
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({extended:true}));
 
-app.get('/',(req,res)=> res.sendFile('index.html',{root:__dirname}));
-
 var session = require('client-sessions');
 
 app.use(session({
@@ -16,7 +14,7 @@ app.use(session({
 }));
 
 const port = process.env.PORT || 4000;
-app.listen(port,()=> console.log('App listening on port',+port));
+app.listen(port,() => console.log('App listening on port',+port));
 
 app.set('view engine','jade');
 app.use(express.static('Login_v2'));
@@ -96,6 +94,23 @@ const UserDetails = mongoose.model('employee', UserDetail,'employee');
 const Admin1 = mongoose.model('admin', Admin,'admin');
 const Requests1=mongoose.model('requests', Requests,'requests');
 
+// app.get('/',(req,res)=> res.sendFile('index.html',{root:__dirname}));
+
+app.get ('/', function (req,res) {
+	var date = new Date();
+	if (date.getMonth() == 11 && date.getDate() == 31) {
+		UserDetails.update({}, {$set: {'casual.credits': 24}}, {multi:true}, function (err){
+			if (!err) {
+				console.log ('Reset all casual credits to 5');
+			} else {
+				console.log ("Couldn't reset casual credits");
+			}
+		})
+	} 
+	// res.sendFile('index.html',{root:__dirname});
+	res.sendfile(path.resolve('index.html'));
+});
+
 /* PASSPORT SETUP */
 
 const passport = require('Passport');
@@ -167,6 +182,28 @@ app.post('/accept',function(req,res){
 					userdoc.casual.credits -= num_days;
 					userdoc.save();
 				})
+				Requests1.remove({ _id: reqid}, function(err) {
+				    if (!err) {
+				    	console.log ('Request removed'); // todo: move requests
+				    }
+				    else {
+				    	console.log ('Request not removed. Check the code');
+				    }
+				});
+				break;
+			case 'halfpay':
+				UserDetails.findOne ({username: username}, function (err, userdoc) {
+					userdoc.halfpay.credits -= num_days;
+					userdoc.save();
+				})
+				Requests1.remove({ _id: reqid}, function(err) {
+				    if (!err) {
+				    	console.log ('Request removed'); // todo: move requests
+				    }
+				    else {
+				    	console.log ('Request not removed. Check the code');
+				    }
+				});
 				break;
 		}	
 	});
@@ -218,59 +255,37 @@ app.post('/leave', function(req,res) {
 	var startdate = new Date(req.body.startdate);
 	var enddate = new Date (req.body.enddate);
 	var num_days = parseInt((enddate - startdate) / (24 * 3600 * 1000));
+	var comment = req.body.comment;
 	var success = true;
-	
+
+
 	switch (a) {
 		case 'casual':
 			UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
 				if (doc.casual.credits - num_days < 0) {
-					// show a pop-up
-					// if (!proceed) {
-					// 	success = false;
-					// }
+					// alert user -> Proceed or Cancel -> success variable
 				}
-				/* Action
-				doc.casual.credits -= num_days;
-				doc.save();
-				*/
 			});
 			break;
 		case 'halfpay':
 			UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
 				if (doc.halfpay.credits - num_days < 0) {
-					// show a pop-up - it will be cut from no due
-					if (proceed) {
-						var newRequest = new Requests1();
-						newRequest.username = req.session.user.username;
-						newRequest.name = req.session.user.name;
-						newRequest.leavetype = 'nodue';
-						newRequest.startdate = startdate;
-						newRequest.enddate = enddate;
-						newRequest.comment = // textbox;
-						newRequest.save (function (err) {
-							if (err) {
-								console.log ('Your request has not been added');
-							} else {
-								console.log ('Request has been added. Please wait for admin to approve');
-							}
-						});
+					// alert user -> Cut from no-due -> Proceed or Cancel
+					if (success) {
+						a = 'notdue';
 					}
+					
 				}
-
-				// doc.halfpay.credits -= num_days;
-				// doc.save();
 			});
 			break;
 		case 'commute':
 			UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
 				if (doc.commuted.count + doc.earned.count + num_days > 240) {
-					// show a pop-up
+					// alert user -> Commuted + Earned + curr_commute > 240 -> Proceed or Cancel
 				}
 				if (doc.commuted.count + num_days > 180) {
-					// show a pop-up
+					// alert user -> Commuted > 180 -> Proceed or Cancel
 				}
-				doc.commuted.count += num_days;
-				doc.save();
 			});
 			break;
 		case 'earned':
@@ -320,22 +335,21 @@ app.post('/leave', function(req,res) {
 			break;
 	}
 	if (success) {
-			console.log(" I am coming here");
-			var newRequest = new Requests1 ();
-			newRequest.username = req.session.user.username;
-			newRequest.name = req.session.user.name;
-			newRequest.leavetype = a;
-			newRequest.startdate = startdate;
-			newRequest.enddate = enddate;
-			newRequest.comment = // textbox;
-			newRequest.save (function (err) {
-				if (err) {
-					console.log ('Your request has not been added');
-				} else {
-					console.log ('Request has been added. Please wait for admin to approve');
-				}
-			});
-		}
+		var newRequest = new Requests1 ();
+		newRequest.username = req.session.user.username;
+		newRequest.name = req.session.user.name;
+		newRequest.leavetype = a;
+		newRequest.startdate = startdate;
+		newRequest.enddate = enddate;
+		newRequest.comment = comment;
+		newRequest.save (function (err) {
+			if (err) {
+				console.log ('Your request has not been added');
+			} else {
+				console.log ('Request has been added. Please wait for admin to approve');
+			}
+		});
+	}
 });
 
 //Admin Login // 
