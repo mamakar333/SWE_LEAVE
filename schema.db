@@ -1,0 +1,1 @@
+db.requests.insert({ username : "nraravind@iith.ac.in",name:"Aravind",leavetype:"casual",startdate:"12131",enddate:"1411",comment:"kk"});

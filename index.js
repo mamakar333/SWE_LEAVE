@@ -1,6 +1,6 @@
 const express= require ('express');
 const app = express();
-
+app.locals.moment = require ('moment');
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({extended:true}));
 
@@ -147,6 +147,7 @@ passport.deserializeUser(function(id, done) {
 
 // AdminAccept
 app.post('/accept',function(req,res){
+	console.log("Something happening");
 
 	var leavetype;
 	var username;
@@ -214,7 +215,7 @@ app.get('/leave',function(req,res){
 
 app.post('/leave', function(req,res) {
 	var a = req.body.leavetype;
-	var startdate = new Date (req.body.startdate);
+	var startdate = new Date(req.body.startdate);
 	var enddate = new Date (req.body.enddate);
 	var num_days = parseInt((enddate - startdate) / (24 * 3600 * 1000));
 	var success = true;
@@ -341,12 +342,15 @@ app.post('/leave', function(req,res) {
 var path = require('path');// This is used to resolve the path issues as we can not use ../ in node
 
 
+
+
 app.post('/adminLogin',
 passport.authenticate('local',{failureRedirect:'/error'}),
 function(req,res,next){
 
 
 Requests1.find({}, function(err, docs){
+		
 		if(err) res.json(err);
 		else    res.render('admin', {requests: docs});
 	});
@@ -358,6 +362,11 @@ Requests1.find({}, function(err, docs){
 	);
 
 
+app.get('/addstaff',function(req,res){
+
+    res.sendfile(path.resolve('admin_fast.html'));
+});
+
 app.get('/adminLogin',function(req,res){
 
     res.sendfile("login_v2/index.html");
@@ -366,6 +375,7 @@ app.get('/adminLogin',function(req,res){
 
 // Update User Information ***************************
 
+/*
 app.get('/updateUser',function(req,res){
 
 	res.sendfile("./Login_v13/index.html");
@@ -403,6 +413,9 @@ app.post('/updateUser',function(req,res){
 
 });
 
+*/
+
+/*
 app.get('/userDetails',function(req,res){
 	var addCred = new UserCredentails();
 
@@ -423,6 +436,7 @@ UserCredentails.find({username:"prasanth"},function(err,staffIn){
 	});
 });
 
+*/
 //  Admin Area User adding and other approvals 
 
 app.get('/adminDashboard',function(req,res){

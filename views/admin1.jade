@@ -1,0 +1,23 @@
+doctype html
+html
+	head
+	title=title
+	body
+		div
+  			table
+    			thead
+      				tr: th Name
+      				tr: th Leave Type
+      				tr: th Start date
+      				tr: th Leave date
+      				tr: th Accept\Reject
+    			tbody
+      				each docs, i in requests
+        				tr
+	          				td=docs.name
+	          				td=docs.leavetype
+	          				td=docs.startdate
+	          				td=docs.leavedate
+	          				td
+	          					button submit
+	            			
