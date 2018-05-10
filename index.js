@@ -3,7 +3,7 @@ const app = express();
 app.locals.moment = require ('moment');
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({extended:true}));
-
+app.get('/',(req,res)=> res.sendFile('index.html',{root:__dirname}));
 var session = require('client-sessions');
 
 app.use(session({
@@ -94,22 +94,22 @@ const UserDetails = mongoose.model('employee', UserDetail,'employee');
 const Admin1 = mongoose.model('admin', Admin,'admin');
 const Requests1=mongoose.model('requests', Requests,'requests');
 
-// app.get('/',(req,res)=> res.sendFile('index.html',{root:__dirname}));
+ 
 
-app.get ('/', function (req,res) {
-	var date = new Date();
-	if (date.getMonth() == 11 && date.getDate() == 31) {
-		UserDetails.update({}, {$set: {'casual.credits': 24}}, {multi:true}, function (err){
-			if (!err) {
-				console.log ('Reset all casual credits to 5');
-			} else {
-				console.log ("Couldn't reset casual credits");
-			}
-		})
-	} 
-	// res.sendFile('index.html',{root:__dirname});
-	res.sendfile(path.resolve('index.html'));
-});
+// app.get ('/', function (req,res) {
+// 	var date = new Date();
+// 	if (date.getMonth() == 11 && date.getDate() == 31) {
+// 		UserDetails.update({}, {$set: {'casual.credits': 24}}, {multi:true}, function (err){
+// 			if (!err) {
+// 				console.log ('Reset all casual credits to 5');
+// 			} else {
+// 				console.log ("Couldn't reset casual credits");
+// 			}
+// 		})
+// 	} 
+// 	// res.sendFile('index.html',{root:__dirname});
+// 	res.sendfile(path.resolve('index.html'));
+// });
 
 /* PASSPORT SETUP */
 
@@ -181,30 +181,58 @@ app.post('/accept',function(req,res){
 				UserDetails.findOne ({username: username}, function (err, userdoc) {
 					userdoc.casual.credits -= num_days;
 					userdoc.save();
-				})
-				Requests1.remove({ _id: reqid}, function(err) {
-				    if (!err) {
-				    	console.log ('Request removed'); // todo: move requests
-				    }
-				    else {
-				    	console.log ('Request not removed. Check the code');
-				    }
-				});
+				});				
 				break;
 			case 'halfpay':
 				UserDetails.findOne ({username: username}, function (err, userdoc) {
 					userdoc.halfpay.credits -= num_days;
 					userdoc.save();
 				})
-				Requests1.remove({ _id: reqid}, function(err) {
-				    if (!err) {
-				    	console.log ('Request removed'); // todo: move requests
-				    }
-				    else {
-				    	console.log ('Request not removed. Check the code');
-				    }
+				break;
+			case 'commute':
+				UserDetails.findOne ({username: username}, function (err, userdoc) {
+					userdoc.halfpay.credits -= (num_days*2);
+					userdoc.commuted.count += num_days;
+					userdoc.save();
 				});
 				break;
+			case 'earned':
+				UserDetails.findOne ({username: username}, function (err, userdoc) {
+					userdoc.earned.credits -= num_days;
+					userdoc.earned.count += num_days;
+					userdoc.save();
+				}); 
+				break;
+			case 'vacation':
+				UserDetails.findOne ({username: username}, function (err, userdoc) {
+					userdoc.earned.credits -= num_days/2;
+					userdoc.vacation.count += num_days;
+					userdoc.save();
+				}); 
+				break;
+			case 'maternity':
+				UserDetails.findOne ({username: username}, function (err, userdoc) {
+					userdoc.maternity.credits -= num_days;
+					userdoc.save();
+				}); 
+				break;
+			case 'paternity':
+				UserDetails.findOne ({username: username}, function (err, userdoc) {
+					userdoc.paternity.credits -= num_days;
+					userdoc.paternity.spells += 1;
+					userdoc.save();
+				});
+			default:
+				console.log ('Invalid leave type')
+
+			Requests1.remove({ _id: reqid}, function(err) {
+			    if (!err) {
+			    	console.log ('Request removed'); // todo: move requests
+			    }
+			    else {
+			    	console.log ('Request not removed. Check the code');
+			    }
+			});
 		}	
 	});
 
@@ -290,46 +318,42 @@ app.post('/leave', function(req,res) {
 			break;
 		case 'earned':
 			UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
-				doc.earned.credits -= num_days;
-				doc.earned.count += num_days;
+				if (doc.earned.count + num_days > 180) {
+					// alert user -> Earned + curr_earned > 180 -> Proceed or Cancel
+				}
 			});
 			break;
 		case 'vacation':
-			UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
-				doc.earned.credits -= num_days/2;
-				doc.vacation.count += num_days;
-			});
+			
 			break;
 		case 'maternity':
-			UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
-				doc.Maternity_leave_credit -= req.body.number;
-				doc.save();
-			});
+			
 			break;
 		case 'paternity':
 			UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
-				doc.Paternity_leave.credit -= req.body.number;
-				doc.save();
+				if (doc.paternity.spells >= 3) {
+					// alert user -> Number of spells exceeds 3 -> Proceed or Cancel
+				}
 			});
 			break;
-		case 'adoption':
-			UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
-				doc.Child_Adop_Leave -= req.body.number;
-				doc.save();
-			});
-			break;
-		case 'child_care':
-			UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
-				doc.Child_care_leave.credit -= req.body.number;
-				doc.save();
-			});
-			break;
-		case 'extraordinary':
-			UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
-				doc.Extraordinary_leave.active_now -= req.body.number;
-				doc.save();
-			});
-			break;
+		// case 'adoption':
+		// 	UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
+		// 		doc.Child_Adop_Leave -= req.body.number;
+		// 		doc.save();
+		// 	});
+		// 	break;
+		// case 'child_care':
+		// 	UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
+		// 		doc.Child_care_leave.credit -= req.body.number;
+		// 		doc.save();
+		// 	});
+		// 	break;
+		// case 'extraordinary':
+		// 	UserDetails.findOne ({username:req.session.user.username}, function (err, doc) {
+		// 		doc.Extraordinary_leave.active_now -= req.body.number;
+		// 		doc.save();
+		// 	});
+		// 	break;
 		default:
 			console.log ('Invalid Leave Type');
 			break;
@@ -479,12 +503,12 @@ else{
         console.log("Please etop"+req.body.uname);
         // Hash the password using SHA1 algorithm.
         newUser.password = req.body.psw;
-        newUser.name="Praaa";
-        newUser.gender="M";
-        newUser.doj=Date();
-        newUser.department="CSE",
-        newUser.position="Assistant Prof",
-        newUser.room="F402",
+        newUser.name=req.body.name;
+        newUser.gender=req.body.gender;
+        newUser.doj=req.body.doj;
+        newUser.department=req.body.department,
+        newUser.position=req.body.position,
+        newUser.room=req.body.room,
         newUser.casual.credits="5";
         newUser.halfpay.credits="10";
         newUser.commuted.count="0";
@@ -520,7 +544,7 @@ else{
             response = {"error" : false,"message" : "Data added go check ur data "};
             console.log("data added ");
         }
-        res.sendfile('./courses.html');
+        res.redirect('/adminLogin');
 
     });
 }
