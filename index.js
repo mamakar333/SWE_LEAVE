@@ -383,14 +383,31 @@ var path = require('path');// This is used to resolve the path issues as we can 
 
 
 app.post('/adminLogin',
-passport.authenticate('local',{failureRedirect:'/error'}),
 function(req,res,next){
 
+var nope = req.body.username;
+console.log(nope);
 
-Requests1.find({}, function(err, docs){
+
+	Admin1.findOne({username:req.body.username},function(err,adm){
+
+		console.log(adm);
+		if(adm==null){
+			res.end("Login Invalid ");
+		}
+		else if(adm){
+			Requests1.find({}, function(errr, docs){
 		
-		if(err) res.json(err);
+		if(errr) res.json(errr);
 		else    res.render('admin', {requests: docs});
+	});
+		}
+		else{
+
+			console.log("Wrong credentials");
+			res.end("login invalid");
+		}
+
 	});
 
 
