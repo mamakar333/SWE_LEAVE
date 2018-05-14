@@ -1,11 +1,23 @@
 const express= require ('express');
 const app = express();
-app.locals.moment = require ('moment');
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({extended:true}));
-app.get('/',(req,res)=> res.sendFile('index.html',{root:__dirname}));
+//app.get('/',(req,res)=> res.sendFile('index.html',{root:__dirname}));
 var session = require('client-sessions');
+var path = require('path');
+//path.resolve
+var jwt = require('jsonwebtoken');//Generating a JSON Web Token (JWT)
 
+var crypto = require('crypto');
+
+//At the top of the users.js model file, require crypto so that we can use it:
+/*
+Nothing needs installing, as crypto ships as part of Node. 
+Crypto itself has several methods; we’re interested in randomBytes to create
+ the random salt and pbkdf2Sync to create the
+  hash (there’s much more about Crypto in the Node.js API docs).
+
+  */
 app.use(session({
   cookieName: 'session',
   secret: 'random_string_goes_here',
@@ -19,7 +31,7 @@ app.listen(port,() => console.log('App listening on port',+port));
 app.set('view engine','jade');
 app.use(express.static('Login_v2'));
 
-
+const bcrypt = require('bcrypt');
 app.use("/css", express.static(__dirname + '/public/css'));
 app.use("/css", express.static(__dirname + '/public/css'));
 app.use('/js', express.static(__dirname + '/node_modules/bootstrap/dist/js')); // redirect to bootstrap JS
@@ -27,8 +39,28 @@ app.use('/js', express.static(__dirname + '/node_modules/jquery/dist')); // redi
 app.use('/css', express.static(__dirname + '/node_modules/bootstrap/dist/css')); //redirect to css bootstrap
 app.use(express.static(__dirname +'Login_v2'));// used to acess the files in a directory
 
-/* MONGOOSE SETUP */
 
+app.get('/',function(req,res){
+sess = req.session;
+//Session set when user Request our app via URL
+if(sess.user) {
+/*
+* This line check Session existence.
+* If it existed will do some action.
+*/
+//var user=sess.user;
+//console.log(user);
+//console.log("This is the number "+user.casual.credits)
+  //  res.render('details',{"employee":user})
+   res.sendfile('index.html',{root:__dirname});
+}
+else {
+    res.sendfile('index.html',{root:__dirname});
+}
+});
+
+/* MONGOOSE SETUP */
+ 
 const mongoose = require('mongoose');
 
 mongoose.connect('mongodb://localhost/MyDatabase');
@@ -94,22 +126,8 @@ const UserDetails = mongoose.model('employee', UserDetail,'employee');
 const Admin1 = mongoose.model('admin', Admin,'admin');
 const Requests1=mongoose.model('requests', Requests,'requests');
 
- 
 
-// app.get ('/', function (req,res) {
-// 	var date = new Date();
-// 	if (date.getMonth() == 11 && date.getDate() == 31) {
-// 		UserDetails.update({}, {$set: {'casual.credits': 24}}, {multi:true}, function (err){
-// 			if (!err) {
-// 				console.log ('Reset all casual credits to 5');
-// 			} else {
-// 				console.log ("Couldn't reset casual credits");
-// 			}
-// 		})
-// 	} 
-// 	// res.sendFile('index.html',{root:__dirname});
-// 	res.sendfile(path.resolve('index.html'));
-// });
+
 
 /* PASSPORT SETUP */
 
@@ -133,20 +151,39 @@ passport.use(new LocalStrategy(function(username,password,done) {
 
 	UserDetails.findOne({username:username},function(err,user){
 
+		
 		if (err){
 			return done(err);
 		}
 		if (!user){
 			return done(null,false);
 		}
-		if (user.password!=password)
+
+		if(user){
+
+				bcrypt.compare(password, user.password, function(err1, res) {
+			console.log("User password is "+user.password);
+    if (err1){ 
+    	 console.log(err1);
+    	 return done(err1);
+    }
+    if (res === false) {
+      console.log(null, false);
+      return done(null,false );
+    } else {
+      console.log(null, user);
+      return done(null, user);
+    }
+  });
+
+		}
+	/*	if (user.password!=password)
 		{
 			return done(null,false);
-		}
-		return done(null, user);
+		} */
+		
 	});
 }));
-
 // used to serialize the user for the session
 passport.serializeUser(function(user, done) {
     done(null, user.id); 
@@ -240,6 +277,10 @@ app.post('/accept',function(req,res){
 
 
 // Staff Login //
+
+app.get('/login',function(req,res){
+    res.sendfile("./student.html");
+});
 app.post('/login',
 passport.authenticate('local'), function(req,res) {
 	UserDetails.findOne({username:req.body.username},function(err,user){
@@ -267,13 +308,12 @@ var User=new UserDetails();
 		            response = {"error" : false , "message" : "data found"};
 		        }
 		        res.render('details',{"employee":user})
+		        console.log("This is the user\n "+user)
 
 		});
 }});
 
-app.get('/login',function(req,res){
-    res.sendfile("./student.html");
-});
+// Requesting a Leave
 app.get('/leave',function(req,res){
     res.sendfile("./leave.html");
 });
@@ -377,11 +417,12 @@ app.post('/leave', function(req,res) {
 });
 
 //Admin Login // 
-var path = require('path');// This is used to resolve the path issues as we can not use ../ in node
 
+app.get('/adminLogin',function(req,res){
 
-
-
+    res.sendfile("login_v2/login.html");
+});
+// This is used to resolve the path issues as we can not use ../ in node
 app.post('/adminLogin',
 function(req,res,next){
 
@@ -416,16 +457,12 @@ console.log(nope);
 }
 	);
 
-
+// Adding Staff to the database
 app.get('/addstaff',function(req,res){
 
     res.sendfile(path.resolve('admin_fast.html'));
 });
 
-app.get('/adminLogin',function(req,res){
-
-    res.sendfile("login_v2/index.html");
-});
 
 
 // Update User Information ***************************
@@ -492,15 +529,18 @@ UserCredentails.find({username:"prasanth"},function(err,staffIn){
 });
 
 */
+
+
 //  Admin Area User adding and other approvals 
 
 app.get('/adminDashboard',function(req,res){
 
     res.sendfile("./courses.html");
 });
+var SALT_WORK_FACTOR = 10;
 
 // user resgitration fusntion . new users are added here 
-app.post('/adminDashboard',function(req,res){
+app.post('/adminDashboard',function(req,res,next){
     //var newUser = new UserDetails();
     var response = {};
     var newUser = new UserDetails();
@@ -517,9 +557,20 @@ else{
         // fetch email and password from REST request.
         // Add strict validation when you use this in Production.
         newUser.username = req.body.uname;
-        console.log("Please etop"+req.body.uname);
-        // Hash the password using SHA1 algorithm.
-        newUser.password = req.body.psw;
+        console.log("Username is "+req.body.uname);
+        console.log("Password is "+req.body.psw);
+
+//https://stackoverflow.com/a/37693110
+// hashing the password 
+        bcrypt.genSalt(10, function(err, salt) {
+    if (err) return next(err);
+    bcrypt.hash(req.body.psw, salt, function(err, hash) {
+      if (err) return next(err);
+      console.log("This is hashed password"+hash);
+      newUser.password = hash; // Or however suits your setup
+      // Store the user to the database, then send the response
+       // Hash the password using SHA1 algorithm.
+       // newUser.password = req.body.psw;
         newUser.name=req.body.name;
         newUser.gender=req.body.gender;
         newUser.doj=req.body.doj;
@@ -564,8 +615,10 @@ else{
         res.redirect('/adminLogin');
 
     });
+    });
+  });
+       
 }
 
 
-   });
-   
+});
