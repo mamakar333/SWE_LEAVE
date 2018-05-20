@@ -58,7 +58,7 @@ const UserDetail = new Schema({
 		
 	},
 	halfpay:{
-		halfpay:String,
+		credits:String,
 		//active_now:String
 	},
 	commuted:{count : String},
@@ -70,7 +70,7 @@ const UserDetail = new Schema({
 	vacation:{count:String},
 	notdue:{count:String},
 	children:[{name:String,age:String,dob:String}],
-	Num_Children:String,
+	
 	maternity:{credits:String},
 	paternity:{credits:String,spells:String},
 	adoption:{credits:String},
