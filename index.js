@@ -2,7 +2,7 @@ const express= require ('express');
 const app = express();
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({extended:true}));
-//app.get('/',(req,res)=> res.sendFile('index.html',{root:__dirname}));
+app.get('/',(req,res)=> res.sendFile('index.html',{root:__dirname}));
 var session = require('client-sessions');
 var path = require('path');
 //path.resolve
@@ -40,24 +40,24 @@ app.use('/css', express.static(__dirname + '/node_modules/bootstrap/dist/css'));
 app.use(express.static(__dirname +'Login_v2'));// used to acess the files in a directory
 
 
-app.get('/',function(req,res){
-sess = req.session;
-//Session set when user Request our app via URL
-if(sess.user) {
-/*
-* This line check Session existence.
-* If it existed will do some action.
-*/
-//var user=sess.user;
-//console.log(user);
-//console.log("This is the number "+user.casual.credits)
-  //  res.render('details',{"employee":user})
-   res.sendfile('index.html',{root:__dirname});
-}
-else {
-    res.sendfile('index.html',{root:__dirname});
-}
-});
+// app.get('/',function(req,res){
+// sess = req.session;
+// //Session set when user Request our app via URL
+// if(sess.user) {
+// /*
+// * This line check Session existence.
+// * If it existed will do some action.
+// */
+// //var user=sess.user;
+// //console.log(user);
+// //console.log("This is the number "+user.casual.credits)
+//   //  res.render('details',{"employee":user})
+//    res.sendfile('index.html',{root:__dirname});
+// }
+// else {
+//     res.sendfile('index.html',{root:__dirname});
+// }
+// });
 
 /* MONGOOSE SETUP */
  
